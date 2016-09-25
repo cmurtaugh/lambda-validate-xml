@@ -1,0 +1,848 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema targetNamespace="http://icommons.harvard.edu/Schema"
+	xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:ic="http://icommons.harvard.edu/Schema"
+	elementFormDefault="qualified">
+
+	<xsd:annotation>
+		<xsd:documentation xml:lang="en">
+			Course feed schema
+			$Revision: 358 $
+			Copyright 2016 The President and Fellows of Harvard College.
+		</xsd:documentation>
+	</xsd:annotation>
+
+	<xsd:simpleType name="emptyString">
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value=""/>
+		</xsd:restriction>
+	</xsd:simpleType>
+
+	<xsd:simpleType name="integerOrEmptyString">
+		<xsd:union memberTypes="xsd:integer ic:emptyString"/>
+	</xsd:simpleType>
+
+	<xsd:element name="courses">
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="course" type="ic:courseType" minOccurs="0" maxOccurs="unbounded"
+				/>
+			</xsd:sequence>
+		</xsd:complexType>
+	</xsd:element>
+
+	<xsd:element name="departments">
+		<xsd:annotation>
+			<xsd:documentation>
+				Used to feed department definitions.
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="department" type="ic:deptCourseGroupType" minOccurs="0"
+					maxOccurs="unbounded"/>
+			</xsd:sequence>
+		</xsd:complexType>
+	</xsd:element>
+
+	<xsd:element name="course_groups">
+		<xsd:annotation>
+			<xsd:documentation>FAS-specific. Used to feed course group definitions (similar to departments).</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="course_group" type="ic:deptCourseGroupType" minOccurs="0"
+					maxOccurs="unbounded"/>
+			</xsd:sequence>
+		</xsd:complexType>
+	</xsd:element>
+
+	<xsd:element name="terms">
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="term" type="ic:termType" minOccurs="0" maxOccurs="unbounded"/>
+			</xsd:sequence>
+		</xsd:complexType>
+	</xsd:element>
+
+	<xsd:element name="students">
+		<xsd:annotation>
+			<xsd:documentation>
+    			Used to feed the full list of students who are eligible to cross-register with this school as their home school.
+    		</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="person" type="ic:personListMemberType" minOccurs="0"
+					maxOccurs="unbounded"/>
+			</xsd:sequence>
+			<xsd:attribute name="school_id" type="ic:schoolIdType"/>
+		</xsd:complexType>
+	</xsd:element>
+
+	<xsd:complexType name="courseType">
+		<xsd:sequence>
+			<xsd:element name="catalog_info" type="ic:catalogInfoType" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="staff" type="ic:personListType" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="enrollees" type="ic:personListType" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="guests" type="ic:personListType" minOccurs="0" maxOccurs="1"/>
+		</xsd:sequence>
+		<xsd:attribute name="school_id" type="ic:schoolIdType" use="required"/>
+		<xsd:attribute name="course_code" type="ic:courseCodeType" use="required"/>
+		<xsd:attribute name="term_code" type="ic:termCodeType" use="required"/>
+		<xsd:attribute name="academic_year" type="xsd:gYear" use="required"/>
+		<xsd:attribute name="section" type="xsd:string">
+			<xsd:annotation>
+				<xsd:documentation>
+					An identifier which is used to differentiate between multiple offerings of the same
+					course within the same term.  Optional for courses that have only one offering within
+					a term.
+				</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+		<xsd:attribute name="cs_class_number" type="xsd:integer">
+			<xsd:annotation>
+				<xsd:documentation>
+					Campus Solutions class ID. This ID along with the academic_year and term_code uniquely identifies a course instance.
+					Optional, to accommodate feeds coming from non-Campus Solutions systems.  If present, this will take precedence over
+					using school_id+course_code+academic_year+term_code+section to identify the course instance.
+				</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+		<xsd:attribute name="cs_strm" type="xsd:integer">
+			<xsd:annotation>
+				<xsd:documentation>
+					Campus Solutions term ID. These term IDs are 4 digit numbers composed as: the first, third and fourth digits of the year, followed by a one-digit term identifier (8=Fall,etc.)
+				</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+		<xsd:attribute name="cs_session_code" type="xsd:string">
+			<xsd:annotation>
+				<xsd:documentation>
+					Campus Solutions session code. Used to indicate parts-of-term.
+				</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+	</xsd:complexType>
+
+	<xsd:complexType name="catalogInfoType">
+		<xsd:sequence>
+			<xsd:element name="course_code_display" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						Use the course_code_display element to override
+						the course_code for display purposes only. The
+						course_code_display does not have to be unique
+						per course within a school.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="title" type="xsd:string"/>
+			<xsd:element name="short_title" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="sub_title" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="location" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="meeting_time" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="exam_group" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="notes" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="prereq" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="enrollment_limit" type="xsd:string" minOccurs="0" maxOccurs="1"> </xsd:element>
+			<xsd:element name="enrollment_limit_flag" type="xsd:boolean" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						Set the enrollment_limit_flag to 'true' to
+						indicate that the enrollment for this course is
+						in some way limited.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="description" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="faculty_description" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						Text describing the faculty member(s) teaching
+						the course. This may be a list of names (in the
+						order and format in which they should be
+						displayed on the website), or it could be
+						something generic, such as "Members of the
+						department"
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="department_short_name" type="xsd:string" minOccurs="0" maxOccurs="10">
+				<xsd:annotation>
+					<xsd:documentation>
+						Use the department_short_name element to
+						associate the course with a department.
+
+						Note: if the course feed includes a reference to
+						a department which has not been previously
+						defined via the departments feed, the importer
+						will create a department record on the fly. The
+						department data may optionally be updated later
+						(to include the full department name, for
+						example).
+
+						For courses that are associated with multiple
+						departments, the department_short_name element
+						can appear more than once.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="course_group_short_name" type="xsd:string" minOccurs="0"
+				maxOccurs="10">
+				<xsd:annotation>
+					<xsd:documentation>
+						Use the course_group_short_name element to
+						associate the course with a course group (FAS
+						specific).
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="course_type" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="credits" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						The amount of credits a student can earn for the
+						course.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="crosslisted_flag" type="xsd:boolean" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						Set the crosslisted_flag to 'true' to indicate
+						that the course is cross listed with another
+						school.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="crosslisted_course" minOccurs="0" maxOccurs="unbounded">
+				<xsd:annotation>
+					<xsd:documentation>
+						Use the crosslisted_course element to specify
+						which course(s) in other school(s) are
+						crosslisted with this one.
+					</xsd:documentation>
+				</xsd:annotation>
+				<xsd:complexType>
+					<xsd:simpleContent>
+						<xsd:extension base="xsd:string">
+							<xsd:attribute name="school_id" type="ic:schoolIdType" use="optional"/>
+							<xsd:attribute name="course_code" type="xsd:string" use="optional"/>
+						</xsd:extension>
+					</xsd:simpleContent>
+				</xsd:complexType>
+			</xsd:element>
+			<xsd:element name="crossregistration_flag" type="xsd:boolean" minOccurs="0"
+				maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						Use the crossregistration_flag element to
+						indicate whether or not the course is available
+						to students outside of the home school.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="crossregistration_description" type="xsd:string" minOccurs="0"
+				maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						Use the crossregistration_description element to
+						supply text indicating whether or not the course
+						is available to students outside of the home
+						school.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="undergraduate_credit_flag" type="xsd:boolean" minOccurs="0"
+				maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						Set the undergraduate_credit_flag to 'true' to
+						indicate that students may receive undergraduate
+						credit for this course
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="graduate_credit_flag" type="xsd:boolean" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						Set the graduate_credit_flag to 'true' to
+						indicate that students may receive graduate
+						credit for this course
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="audit_flag" type="ic:auditFlagType" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						Set the audit_flag to 'true' to indicate that
+						students may audit this course.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="offered_flag" type="xsd:boolean" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						Set the offered_flag to false for bracketed
+						courses. Default: true.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="next_offer_year" type="xsd:gYear" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						The next year in which the course is expected to
+						be offered.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="exclude_from_catalog" type="xsd:boolean" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						Set the exclude_from_catalog flag to 'true' to
+						prevent the course from being displayed in the
+						University Catalog. Default: false.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="exclude_from_isites" type="xsd:boolean" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						Set the exclude_from_isites flag to 'true' to
+						prevent the course from being associated with an
+						iSite. Default: false.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="exclude_from_coop" type="xsd:boolean" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						Set the exclude_from_coop flag to 'true' to
+						prevent the course from being fed to the Coop
+						for the purpose of gathering textbook
+						information. Default: false.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="meeting_schedule" type="ic:meetingScheduleType" minOccurs="0"
+				maxOccurs="1"/>
+			<xsd:element name="exam_date" type="xsd:date" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="exam_date_description" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						Use the exam_date_description element to feed
+						information about when the exam will be held
+						that isn't in a simple date format.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="url" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+						A url associated with the course, for the
+						syllabus, course website, etc.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+
+			<xsd:element name="crossreg_grading_option" maxOccurs="unbounded" minOccurs="0">
+				<xsd:annotation>
+					<xsd:documentation>
+			         Contains the list of grading options available to students cross-registering into this course.
+			     </xsd:documentation>
+				</xsd:annotation>
+				<xsd:complexType>
+					<xsd:attribute name="option">
+						<xsd:simpleType>
+							<xsd:restriction base="xsd:string">
+								<xsd:enumeration value="letter/ordinal">
+									<xsd:annotation>
+										<xsd:documentation>Letter/Ordinal</xsd:documentation>
+									</xsd:annotation>
+								</xsd:enumeration>
+								<xsd:enumeration value="pass/fail">
+									<xsd:annotation>
+										<xsd:documentation>Pass/Fail</xsd:documentation>
+									</xsd:annotation>
+								</xsd:enumeration>
+								<xsd:enumeration value="sat/unsat">
+									<xsd:annotation>
+										<xsd:documentation>Satisfactory/Unsatisfactory</xsd:documentation>
+									</xsd:annotation>
+								</xsd:enumeration>
+								<xsd:enumeration value="sat/ncr">
+									<xsd:annotation>
+										<xsd:documentation>Satisfactory/No Credit</xsd:documentation>
+									</xsd:annotation>
+								</xsd:enumeration>
+								<xsd:enumeration value="ungraded">
+									<xsd:annotation>
+										<xsd:documentation>Ungraded</xsd:documentation>
+									</xsd:annotation>
+								</xsd:enumeration>
+								<xsd:enumeration value="audit">
+									<xsd:annotation>
+										<xsd:documentation>Audit</xsd:documentation>
+									</xsd:annotation>
+								</xsd:enumeration>
+							</xsd:restriction>
+						</xsd:simpleType>
+					</xsd:attribute>
+				</xsd:complexType>
+			</xsd:element>
+
+			<xsd:element name="crossreg_instructor_signature_required" type="xsd:boolean"
+				minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>
+			             Use this boolean flag to indicate whether or not cross-registering students must obtain the
+			             instructor's signature before they may be accepted into the class.  The default value is true;
+			             if this element is not present, the value will be assumed to be true.
+			         </xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+
+			<xsd:element name="prereq_course" maxOccurs="unbounded" minOccurs="0">
+				<xsd:complexType>
+					<xsd:attribute name="school_id" type="ic:schoolIdType"/>
+					<xsd:attribute name="course_code" type="ic:courseCodeType"/>
+				</xsd:complexType>
+			</xsd:element>
+
+			<xsd:element name="enrollment_size" maxOccurs="unbounded" minOccurs="0">
+				<xsd:complexType>
+					<xsd:attribute name="number" type="xsd:int"/>
+					<xsd:attribute name="description" type="xsd:string"/>
+					<xsd:attribute name="type">
+						<xsd:simpleType>
+							<xsd:restriction base="xsd:string">
+								<xsd:enumeration value="actual"/>
+								<xsd:enumeration value="historical"/>
+								<xsd:enumeration value="projected"/>
+							</xsd:restriction>
+						</xsd:simpleType>
+					</xsd:attribute>
+				</xsd:complexType>
+			</xsd:element>
+
+			<xsd:element name="tags" maxOccurs="1" minOccurs="0">
+				<xsd:complexType>
+					<xsd:sequence>
+						<xsd:element name="tag">
+							<xsd:complexType>
+								<xsd:attribute name="label"/>
+							</xsd:complexType>
+						</xsd:element>
+					</xsd:sequence>
+				</xsd:complexType>
+
+			</xsd:element>
+			<xsd:element name="evaluation" maxOccurs="unbounded" minOccurs="0">
+				<xsd:complexType>
+					<xsd:attribute name="score" type="xsd:string"> </xsd:attribute>
+					<xsd:attribute name="scale_min" type="xsd:string"> </xsd:attribute>
+					<xsd:attribute name="scale_max" type="xsd:string"> </xsd:attribute>
+					<xsd:attribute name="label" type="xsd:string"> </xsd:attribute>
+					<xsd:attribute name="url" type="xsd:string"> </xsd:attribute>
+				</xsd:complexType>
+			</xsd:element>
+			<xsd:element name="crossreg_instructor_proxy" minOccurs="0" maxOccurs="unbounded">
+				<xsd:complexType>
+					<xsd:attribute name="id" type="xsd:string" use="required"/>
+				</xsd:complexType>
+			</xsd:element>
+			<xsd:element name="cs_class_type" maxOccurs="1" minOccurs="0">
+				<xsd:simpleType>
+					<xsd:restriction base="xsd:string">
+						<xsd:enumeration value="E"/>
+						<xsd:enumeration value="N"/>
+						<xsd:enumeration value=""/>
+					</xsd:restriction>
+				</xsd:simpleType>
+			</xsd:element>
+			<xsd:element minOccurs="0" maxOccurs="1" name="associated_class_number" nillable="true">
+				<xsd:annotation>
+					<xsd:documentation>The associated_class_number can be used to relate non-enrollment sections to a particular parent enrollment section.  The value of this element should be the class number of the parent enrollment section.</xsd:documentation>
+				</xsd:annotation>
+				<xsd:simpleType>
+					<xsd:union memberTypes="xsd:integer ic:emptyString"/>
+				</xsd:simpleType>
+			</xsd:element>
+			<xsd:element minOccurs="0" maxOccurs="1" name="combined_section_id" nillable="true">
+				<xsd:annotation>
+					<xsd:documentation>The combined_section_id can be used to identify courses that are cross-listed.  All sections that are cross-listed should share the same combined_section_id value. </xsd:documentation>
+				</xsd:annotation>
+				<xsd:simpleType>
+					<xsd:union memberTypes="xsd:integer ic:emptyString"/>
+				</xsd:simpleType>
+			</xsd:element>
+			<xsd:element name="fully_graded" type="xsd:boolean" minOccurs="0" maxOccurs="1"
+				nillable="true">
+				<xsd:annotation>
+					<xsd:documentation>
+						Set the fully_graded flag to 'true' to indicate
+						that grading is complete for this course and the
+						course site can be switched to the concluded state.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="deleted" type="xsd:boolean" minOccurs="0" maxOccurs="1"
+				nillable="true">
+				<xsd:annotation>
+					<xsd:documentation>
+						Set the value to true or 1 to indicate that this course has been deleted in the upstream SIS.
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+
+		</xsd:sequence>
+	</xsd:complexType>
+
+	<xsd:complexType name="meetingScheduleType">
+		<xsd:sequence>
+			<xsd:element name="meeting" type="ic:meetingType" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+
+	<xsd:complexType name="meetingType">
+		<xsd:sequence>
+			<xsd:element name="notes" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+		</xsd:sequence>
+		<xsd:attribute name="start_time" type="xsd:time" use="required"/>
+		<xsd:attribute name="end_time" type="xsd:time" use="required"/>
+		<xsd:attribute name="days_of_week" type="ic:daysOfWeekType" use="required"/>
+		<xsd:attribute name="location" type="xsd:string"/>
+		<xsd:attribute name="meeting_type" type="xsd:string">
+			<xsd:annotation>
+				<xsd:documentation>Use the meeting_type attribute to indicate the nature of the meeting, e.g. lecture, lab, seminar, study group, etc.</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+		<xsd:attribute name="x_sched" type="xsd:boolean">
+			<xsd:annotation>
+				<xsd:documentation>Set to true to indicate that this meeting schedule follows the HBS x-schedule. Default: false.</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+		<xsd:attribute name="y_sched" type="xsd:boolean">
+			<xsd:annotation>
+				<xsd:documentation>Set to true to indicate that this meeting schedule follows the HBS y-schedule. Default: false.</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+
+	</xsd:complexType>
+
+	<xsd:simpleType name="meetingTypeType">
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="lecture"/>
+			<xsd:enumeration value="lab"/>
+			<xsd:enumeration value="seminar"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+
+	<xsd:simpleType name="daysOfWeekType">
+		<xsd:list itemType="ic:dayOfWeek"/>
+	</xsd:simpleType>
+
+	<xsd:simpleType name="dayOfWeek">
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="Monday"/>
+			<xsd:enumeration value="Tuesday"/>
+			<xsd:enumeration value="Wednesday"/>
+			<xsd:enumeration value="Thursday"/>
+			<xsd:enumeration value="Friday"/>
+			<xsd:enumeration value="Saturday"/>
+			<xsd:enumeration value="Sunday"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+
+	<xsd:complexType name="personListType">
+		<xsd:sequence>
+			<xsd:element name="person" type="ic:personListMemberType" minOccurs="0"
+				maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+
+	<xsd:complexType name="deptCourseGroupType">
+		<xsd:attribute name="school_id" type="ic:schoolIdType" use="required"/>
+		<xsd:attribute name="short_name" type="xsd:string" use="required"/>
+		<xsd:attribute name="long_name" type="xsd:string"/>
+	</xsd:complexType>
+
+	<xsd:complexType name="termType">
+		<xsd:sequence>
+			<xsd:element name="display_name" type="xsd:string" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="calendar_year" type="xsd:gYear" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="start_date" type="xsd:date" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="end_date" type="xsd:date" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="shopping_start_date" type="xsd:date" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="shopping_end_date" type="xsd:date" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>Used to control shopping-period specific behavior in iSites</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="enrollment_end_date" type="xsd:date" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>Display only currently</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="xreg_start_date" type="xsd:date" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>When students can start creating xreg petitions</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="xreg_end_date" type="xsd:date" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>When students no longer create xreg petitions</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="exam_start_date" type="xsd:date" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="exam_end_date" type="xsd:date" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="drop_date" type="xsd:date" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="withdrawal_date" type="xsd:date" minOccurs="0" maxOccurs="1"/>
+			<xsd:element name="active" type="xsd:boolean" minOccurs="0" maxOccurs="1"/>
+		</xsd:sequence>
+		<xsd:attribute name="school_id" type="ic:schoolIdType" use="required"/>
+		<xsd:attribute name="academic_year" type="xsd:gYear" use="required"/>
+		<xsd:attribute name="term_code" type="ic:termCodeType" use="required"/>
+	</xsd:complexType>
+
+	<xsd:complexType name="personListMemberType">
+		<xsd:all minOccurs="0">
+			<xsd:element name="url" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>URL for a bio page, personal site, etc.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="display_name" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>Optionally specify a display name to be used instead of the value in LDAP (catalog site only).</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="nickname" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>Optionally specify a display name to be used instead of the value in LDAP (catalog site only).</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="enrollment_status" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation> e.g. enrolled/section member/withdrawn/excluded/suspended (auditor?) .</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="expected_graduation_date" type="xsd:string" minOccurs="0"
+				maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>String representation of the student's expected graduation date.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="grading_option" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>e.g. letter/ordinal, sat/unsat, pass/fail or audit</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="home_school" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>For cross-registered students, the home registrar.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="program" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>The program that the person is associated with.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="semester" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>(get description from GSD)</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="house_affiliation" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>House or yard affiliation</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="year" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>Year, e.g. FR/SO/JR/SR/etc.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="concentration" type="xsd:string" minOccurs="0" maxOccurs="1">
+				<xsd:annotation>
+					<xsd:documentation>Concentration</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+		</xsd:all>
+		<xsd:attribute name="id" type="xsd:string" use="required">
+			<xsd:annotation>
+				<xsd:documentation>The HUID or XID that uniquely identifies the person.</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+		<xsd:attribute name="role" type="ic:integerOrEmptyString"/>
+		<xsd:attribute name="seniority_sort" type="xsd:integer">
+			<xsd:annotation>
+				<xsd:documentation>Optionally control the order in which multiple people are displayed (catalog site only).</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+		<xsd:attribute name="grad_undergrad_flag" type="xsd:string">
+			<xsd:annotation>
+				<xsd:documentation>For use in the xreg_eligible_students file only: value can be 'G' for graduate or 'U' for undergraduate.</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+		<xsd:attribute name="advisor_id" type="xsd:string">
+			<xsd:annotation>
+				<xsd:documentation>For use in the xreg_eligible_students file only: the ID (typically HUID) of the student's advisor or residential dean.</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+		<xsd:attribute name="display" type="xsd:boolean">
+			<xsd:annotation>
+				<xsd:documentation>Boolean flag to control whether or not this staff member will be displayed in places like the catalog and the course information tool. The default value for this field, if not present, is TRUE.</xsd:documentation>
+			</xsd:annotation>
+		</xsd:attribute>
+	</xsd:complexType>
+
+	<xsd:simpleType name="auditFlagType">
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="Y"/>
+			<xsd:enumeration value="N"/>
+			<xsd:enumeration value="D">
+				<xsd:annotation>
+					<xsd:documentation>At the discretion of the instructor.</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType>
+
+	<xsd:simpleType name="schoolIdType">
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="arb"/>
+			<xsd:enumeration value="bcis"/>
+			<xsd:enumeration value="colgsas"/>
+			<xsd:enumeration value="dce"/>
+			<xsd:enumeration value="ext"/>
+			<xsd:enumeration value="fas"/>
+			<xsd:enumeration value="gsd"/>
+			<xsd:enumeration value="gse"/>
+			<xsd:enumeration value="hcl"/>
+			<xsd:enumeration value="hds"/>
+			<xsd:enumeration value="hilr"/>
+			<xsd:enumeration value="hks"/>
+			<xsd:enumeration value="hls"/>
+			<xsd:enumeration value="hms"/>
+			<xsd:enumeration value="hsdm"/>
+			<xsd:enumeration value="hsph"/>
+			<xsd:enumeration value="hu"/>
+			<xsd:enumeration value="ksg"/>
+			<xsd:enumeration value="mit"/>
+			<xsd:enumeration value="rad"/>
+			<xsd:enumeration value="sum"/>
+			<xsd:enumeration value="hbsdoc"/>
+			<xsd:enumeration value="hbsmba"/>
+			<xsd:enumeration value="hss"/>
+			<xsd:enumeration value="div"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+
+	<xsd:simpleType name="termCodeType">
+		<xsd:restriction base="xsd:integer">
+			<xsd:enumeration value="0">
+				<xsd:annotation>
+					<xsd:documentation>Summer</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="1">
+				<xsd:annotation>
+					<xsd:documentation>Fall</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="2">
+				<xsd:annotation>
+					<xsd:documentation>Spring</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="4">
+				<xsd:annotation>
+					<xsd:documentation>Full Year</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="5">
+				<xsd:annotation>
+					<xsd:documentation>Winter/J-Term</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="6">
+				<xsd:annotation>
+					<xsd:documentation>Fall 1</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="7">
+				<xsd:annotation>
+					<xsd:documentation>Fall 2</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="8">
+				<xsd:annotation>
+					<xsd:documentation>Spring 1</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="9">
+				<xsd:annotation>
+					<xsd:documentation>Spring 2</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="10">
+				<xsd:annotation>
+					<xsd:documentation>June-July</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="11">
+				<xsd:annotation>
+					<xsd:documentation>July-August</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="12">
+				<xsd:annotation>
+					<xsd:documentation>Fall-Winter</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="13">
+				<xsd:annotation>
+					<xsd:documentation>Winter-Spring</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="14">
+				<xsd:annotation>
+					<xsd:documentation>Fall Saturday</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="15">
+				<xsd:annotation>
+					<xsd:documentation>Spring Saturday</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="16">
+				<xsd:annotation>
+					<xsd:documentation>June</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="17">
+				<xsd:annotation>
+					<xsd:documentation>July</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="18">
+				<xsd:annotation>
+					<xsd:documentation>August</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+
+		</xsd:restriction>
+	</xsd:simpleType>
+
+	<xsd:simpleType name="courseCodeType">
+		<xsd:annotation>
+			<xsd:documentation>The course code may only contain alphanumeric characters, hyphens, underscores, and periods</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:pattern value="[a-zA-Z0-9\-_\.]+"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+
+
+</xsd:schema>
