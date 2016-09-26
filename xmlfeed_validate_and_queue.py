@@ -4,10 +4,14 @@ import json
 import urllib
 import boto3
 from lxml import etree
+import time
 
 print('Loading function')
 
 s3 = boto3.client('s3')
+sns = boto3.client('sns')
+sqs = boto3.resource('sqs')
+dynamodb = boto3.client('dynamodb')
 
 schema_file = './CourseFeed.xsd'
 with open(schema_file, 'r') as f:
@@ -18,38 +22,110 @@ schema = etree.XMLSchema(schema_root)
 def lambda_handler(event, context):
     print("Received event: " + json.dumps(event, indent=2))
 
+    print("Function/version: {}/{}".format(context.function_name, context.function_version))
+    dynamo_config = dynamodb.get_item(TableName='configuration', Key={'application': {'S': context.function_name}})
+    sns_topic = dynamo_config['Item']['sns_topic']['S']
+    queue_name = dynamo_config['Item']['queue_name']['S']
+    school_ids = dynamo_config['Item']['school_ids']['SS']
+
     # Get the object from the event and show its content type
     bucket = event['Records'][0]['s3']['bucket']['name']
     key = urllib.unquote_plus(event['Records'][0]['s3']['object']['key'].encode('utf8'))
+
+    # make sure the key looks normal
     try:
-        response = s3.get_object(Bucket=bucket, Key=key)
-        print("CONTENT TYPE: " + response['ContentType'])
+        (school_id, filename) = key.split('/')
+        if school_id not in school_ids:
+            print("Key path doesn't match valid school IDs: {}".format(key))
+            return False
+    except ValueError:
+        print("Uploaded file key format is incorrect: {}".format(key))
+        return False
 
-        # validate the XML
-        (is_valid, errmsg) = validate_xml(response['Body'])
-        if is_valid:
-            print("XML document is valid!")
-        else:
-            print("ERROR: XML document is invalid! {}".format(errmsg))
+    is_valid, errmsg = check_file(bucket, key)
+    if is_valid:
+        # move the file to the archive bucket
+        new_bucket, new_key = move_to_archive(bucket, key)
+        # queue the file for import
+        message_id = queue_import_job(queue_name, new_bucket, new_key, school_id)
+        # notify the user
+        sns.publish(
+            TopicArn=sns_topic,
+            Subject='Successfully queued /{} for import'.format(key),
+            Message='Feed file /{} has been received, validated, and queued for import. The message ID for this queued job is {}.'.format(key, message_id),
+        )
+        return True
+    else:
+        print("ERROR: XML document is invalid! {}".format(errmsg))
+        sns.publish(
+            TopicArn=sns_topic,
+            Subject='ERROR validating /{}'.format(key),
+            Message='Feed file /{} failed validation: {}'.format(key, errmsg),
+        )
+        return False
 
-        return response['ContentType']
 
+def check_file(bucket, key):
+    try:
+        uploaded_xml = s3.get_object(Bucket=bucket, Key=key)
     except Exception as e:
-        print(e)
-        print('Error getting object {} from bucket {}. Make sure they exist and your bucket is in the same region as this function.'.format(key, bucket))
-        raise e
+        return False, "Could not retrieve file {} from bucket for validation: {}".format(key, bucket, e)
 
+    # make sure what we have is an XML file
+    if uploaded_xml['ContentType'] != 'application/xml':
+        return False, "Uploaded file content type '{}' doesn't match 'application/xml'".format(uploaded_xml['ContentType'])
 
-def validate_xml(filedata):
+    # validate the XML
     try:
-        doc = etree.parse(filedata)
+        doc = etree.parse(uploaded_xml['Body'])
         schema.assertValid(doc)
+        print('Document /{} is valid.'.format(key))
         return True, None
 
     except etree.DocumentInvalid as xsde:
         print('XMLSchemaError: {}'.format(xsde))
         return False, str(xsde)
 
-    except etree.XMLSyntaxError as e:
-        print('XMLSyntaxError: {}'.format(e.msg))
-        return False, str(e)
+
+def move_to_archive(bucket, key):
+    # move the file to the archive bucket and give it a unique filename
+    new_key = '/'.join([key.split('/')[0], time.strftime("%Y%m%d-%H%M%S")])
+    new_bucket = bucket.replace('dropbox', 'archive')
+    s3.copy_object(CopySource='/'.join([bucket, key]), Bucket=new_bucket, Key=new_key)
+    print("successfully copied to {}/{}".format(new_bucket, new_key))
+
+    # then delete it from the dropbox
+    s3.delete_object(Bucket=bucket, Key=key)
+    print("successfully deleted old file {}/{}".format(bucket, key))
+    return new_bucket, new_key
+
+
+def queue_import_job(queue_name, bucket, key, school_id):
+    # may eventually set up separate queues per school...
+    queue = sqs.get_queue_by_name(QueueName=queue_name)
+    message = queue.send_message(
+        MessageBody='/'.join([bucket, key]),
+        MessageAttributes={
+            'bucket': {
+                'StringValue': bucket,
+                'DataType': 'String'
+            },
+            'key': {
+                'StringValue': key,
+                'DataType': 'String'
+            },
+            'school_id': {
+                'StringValue': school_id,
+                'DataType': 'String'
+            },
+        }
+    )
+    print(json.dumps(message, indent=2))
+    return message['MessageId']
+
+
+# test it:
+
+# move_to_archive('hds', 'uw-feed-dropbox-qa', 'hds/hds-fall-courses.xml')
+# check_file('uw-feed-dropbox-qa', 'hls/hls_courses.xml')
+# queue_import_job('testbucket', 'sch/test.xml')
