@@ -5,8 +5,12 @@ import urllib
 import boto3
 from lxml import etree
 import time
+import logging
 
-print('Loading function')
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+logger.info('Loading function')
 
 s3 = boto3.client('s3')
 sns = boto3.client('sns')
@@ -20,34 +24,40 @@ schema = etree.XMLSchema(schema_root)
 
 
 def lambda_handler(event, context):
-    print("Received event: " + json.dumps(event, indent=2))
+    logger.info("Received event: " + json.dumps(event, indent=2))
 
-    print("Function/version: {}/{}".format(context.function_name, context.function_version))
+    logger.info("Function/version: %s/%s", context.function_name, context.function_version)
     dynamo_config = dynamodb.get_item(TableName='configuration', Key={'application': {'S': context.function_name}})
     sns_topic = dynamo_config['Item']['sns_topic']['S']
     queue_name = dynamo_config['Item']['queue_name']['S']
     school_ids = dynamo_config['Item']['school_ids']['SS']
 
-    # Get the object from the event and show its content type
+    # Get the uploaded object from the event and show its content type
     bucket = event['Records'][0]['s3']['bucket']['name']
     key = urllib.unquote_plus(event['Records'][0]['s3']['object']['key'].encode('utf8'))
 
     # make sure the key looks normal
     try:
+        # the key should have two parts separated by a /
         (school_id, filename) = key.split('/')
         if school_id not in school_ids:
-            print("Key path doesn't match valid school IDs: {}".format(key))
+            logger.error("Key path doesn't match valid school IDs: %s", key)
             return False
     except ValueError:
-        print("Uploaded file key format is incorrect: {}".format(key))
+        # this will be thrown if the key doesn't split into two parts
+        logger.error("Uploaded file key format is incorrect: %s", key)
         return False
 
+    # make sure the file is XML and validates against the schema
     is_valid, errmsg = check_file(bucket, key)
     if is_valid:
+        logger.info('Document %s/%s is valid.', bucket, key)
         # move the file to the archive bucket
         new_bucket, new_key = move_to_archive(bucket, key)
+        logger.info('Successfully moved from %s/%s to %s/%s', bucket, key, new_bucket, new_key)
         # queue the file for import
         message_id = queue_import_job(queue_name, new_bucket, new_key, school_id)
+        logger.info('Queued job %s for import of %s/%s', message_id, new_bucket, new_key)
         # notify the user
         sns.publish(
             TopicArn=sns_topic,
@@ -56,7 +66,7 @@ def lambda_handler(event, context):
         )
         return True
     else:
-        print("ERROR: XML document is invalid! {}".format(errmsg))
+        logger.error("XML document is invalid! {}".format(errmsg))
         sns.publish(
             TopicArn=sns_topic,
             Subject='ERROR validating /{}'.format(key),
@@ -79,11 +89,9 @@ def check_file(bucket, key):
     try:
         doc = etree.parse(uploaded_xml['Body'])
         schema.assertValid(doc)
-        print('Document /{} is valid.'.format(key))
         return True, None
 
     except etree.DocumentInvalid as xsde:
-        print('XMLSchemaError: {}'.format(xsde))
         return False, str(xsde)
 
 
@@ -92,11 +100,11 @@ def move_to_archive(bucket, key):
     new_key = '/'.join([key.split('/')[0], time.strftime("%Y%m%d-%H%M%S")])
     new_bucket = bucket.replace('dropbox', 'archive')
     s3.copy_object(CopySource='/'.join([bucket, key]), Bucket=new_bucket, Key=new_key)
-    print("successfully copied to {}/{}".format(new_bucket, new_key))
+    logger.debug("successfully copied to {}/{}".format(new_bucket, new_key))
 
     # then delete it from the dropbox
     s3.delete_object(Bucket=bucket, Key=key)
-    print("successfully deleted old file {}/{}".format(bucket, key))
+    logger.debug("successfully deleted old file {}/{}".format(bucket, key))
     return new_bucket, new_key
 
 
@@ -120,7 +128,7 @@ def queue_import_job(queue_name, bucket, key, school_id):
             },
         }
     )
-    print(json.dumps(message, indent=2))
+    logger.debug(json.dumps(message, indent=2))
     return message['MessageId']
 
 
